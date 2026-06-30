@@ -1,0 +1,205 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito:400,600,700');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+// Estilos ETEQS
+.eteqs-gold {
+    color: $eteqs-gold;
+}
+
+.btn-gold {
+    background-color: $eteqs-gold;
+    border-color: $eteqs-gold;
+    color: #fff;
+    font-weight: 600;
+
+    &:hover {
+        background-color: $eteqs-gold-dark;
+        border-color: $eteqs-gold-dark;
+        color: #fff;
+    }
+}
+
+// Cabeçalho da aplicação (navbar)
+.navbar.eteqs-navbar {
+    background: linear-gradient(90deg, $eteqs-blue-dark 0%, $eteqs-blue 100%);
+    border-bottom: 3px solid $eteqs-gold;
+    box-shadow: 0 2px 10px rgba(13, 71, 161, 0.18);
+
+    .navbar-brand {
+        color: #fff;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .brand-subtitle {
+        font-size: 0.72rem;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.8);
+        display: block;
+        line-height: 1.1;
+    }
+
+    .nav-link {
+        color: rgba(255, 255, 255, 0.9) !important;
+
+        &:hover {
+            color: $eteqs-gold !important;
+        }
+    }
+}
+
+// Tela de login
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, $eteqs-blue-dark 0%, $eteqs-blue 60%, lighten($eteqs-blue, 5%) 100%);
+    padding: 1.5rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    border: none;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+
+    .login-header {
+        background: linear-gradient(135deg, $eteqs-blue 0%, $eteqs-blue-dark 100%);
+        color: #fff;
+        text-align: center;
+        padding: 2rem 1.5rem 1.5rem;
+        border-bottom: 4px solid $eteqs-gold;
+    }
+
+    .login-title {
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: 1px;
+    }
+
+    .login-subtitle {
+        font-size: 0.78rem;
+        color: rgba(255, 255, 255, 0.82);
+        margin-top: 0.25rem;
+    }
+
+    .login-body {
+        padding: 2rem 2rem 1.5rem;
+    }
+
+    .login-footer {
+        text-align: center;
+        font-size: 0.72rem;
+        color: #8a93a6;
+        padding-bottom: 1.25rem;
+    }
+}
+
+// Painel
+.painel-hero {
+    background: linear-gradient(135deg, $eteqs-blue 0%, $eteqs-blue-dark 100%);
+    color: #fff;
+    border-radius: 1rem;
+    padding: 2rem;
+    border-bottom: 4px solid $eteqs-gold;
+}
+
+// ===== Alternativas estilo Kahoot (cores + símbolos) =====
+$kahoot: (
+  vermelho: #e21b3c,
+  azul:     #1368ce,
+  amarelo:  #d89e00,
+  verde:    #26890c,
+);
+
+// Símbolo colorido (círculo com a forma)
+.alt-shape {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+@each $cor, $hex in $kahoot {
+  .alt-shape-#{$cor} { background-color: $hex; }
+}
+
+// Linha de alternativa no formulário
+.alternativa-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+@each $cor, $hex in $kahoot {
+  .alternativa-#{$cor} { background-color: rgba($hex, 0.06); }
+}
+
+// Mini-card de alternativa (listagem/show)
+.alt-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e3e6ee;
+  font-size: 0.9rem;
+  min-height: 2.6rem;
+
+  .alt-shape {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@each $cor, $hex in $kahoot {
+  .alt-#{$cor} { border-left: 6px solid $hex; }
+}
+
+// Destaque para a alternativa correta na listagem
+.alt-correta {
+  box-shadow: 0 0 0 2px rgba(38, 137, 12, 0.35);
+}
+
+// Botões grandes do jogador (mobile) — Parte 2
+.btn-jogador {
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.25rem;
+  padding: 1.5rem 1rem;
+  border-radius: 0.75rem;
+  min-height: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+  transition: transform 0.05s;
+
+  &:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); }
+}
+
+@each $cor, $hex in $kahoot {
+  .btn-jogador-#{$cor} { background-color: $hex; }
+}

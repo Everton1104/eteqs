@@ -1,0 +1,21 @@
+// Body
+$body-bg: #f4f6fb;
+
+// Typography
+$font-family-sans-serif: 'Nunito', sans-serif;
+$font-size-base: 0.9rem;
+$line-height-base: 1.6;
+
+// Brand ETEQS — azul institucional + dourado
+$eteqs-blue: #0d47a1;
+$eteqs-blue-dark: #0a3470;
+$eteqs-gold: #d4af37;
+$eteqs-gold-dark: #b8932b;
+
+// Bootstrap theme colors
+$primary: $eteqs-blue;
+$dark: $eteqs-blue-dark;
+
+// Cards
+$card-border-radius: 0.75rem;
+$card-box-shadow: 0 10px 30px rgba(13, 71, 161, 0.12);
