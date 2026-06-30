@@ -20,8 +20,14 @@
         <div><strong>{{ $sala->perguntas->count() }}</strong> pergunta(s) nesta sala.</div>
         <div class="d-flex gap-2">
             <a href="{{ route('professor.salas.perguntas.create', $sala) }}" class="btn btn-primary btn-sm">+ Adicionar pergunta</a>
-            {{-- Botão "Iniciar sala" ativado na Parte 2 (ao vivo) --}}
-            <button class="btn btn-gold btn-sm" disabled title="Disponível na etapa ao vivo">Iniciar sala ao vivo</button>
+            @if ($sala->perguntas->isEmpty())
+                <button class="btn btn-gold btn-sm" disabled title="Adicione pelo menos uma pergunta">Iniciar sala ao vivo</button>
+            @else
+                <form method="POST" action="{{ route('professor.salas.iniciar', $sala) }}" class="d-inline">
+                    @csrf
+                    <button class="btn btn-gold btn-sm">Iniciar sala ao vivo</button>
+                </form>
+            @endif
         </div>
     </div>
 

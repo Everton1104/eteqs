@@ -15,36 +15,27 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-md-4">
-            <a href="{{ route('professores.index') }}" class="text-decoration-none">
-                <div class="card h-100 shadow-sm border-primary">
-                    <div class="card-body">
-                        <h2 class="h5 card-title text-dark">Professores</h2>
-                        <p class="card-text text-muted">Cadastre e gerencie os professores que poderão criar quizzes.</p>
-                        <span class="btn btn-primary">Gerenciar professores</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <a href="{{ route('professor.home') }}" class="text-decoration-none">
                 <div class="card h-100 shadow-sm border-primary">
                     <div class="card-body">
                         <h2 class="h5 card-title text-dark">Minhas salas</h2>
-                        <p class="card-text text-muted">Crie salas com perguntas de múltipla escolha e conduza o jogo ao vivo.</p>
+                        <p class="card-text text-muted">Crie salas com perguntas de múltipla escolha, entre na sala e inicie o jogo ao vivo.</p>
                         <span class="btn btn-primary">Gerenciar salas</span>
                     </div>
                 </div>
             </a>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h2 class="h5 card-title">Salas de jogo</h2>
-                    <p class="card-text text-muted">Em breve: inicie uma sala e receba os alunos via PIN de jogo (estilo Kahoot).</p>
-                    <button class="btn btn-gold" disabled>Iniciar sala</button>
+        <div class="col-md-6">
+            <a href="{{ route('professores.index') }}" class="text-decoration-none">
+                <div class="card h-100 shadow-sm border-primary">
+                    <div class="card-body">
+                        <h2 class="h5 card-title text-dark">Professores</h2>
+                        <p class="card-text text-muted">Cadastre e remova os professores do sistema.</p>
+                        <span class="btn btn-primary">Gerenciar professores</span>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 </div>

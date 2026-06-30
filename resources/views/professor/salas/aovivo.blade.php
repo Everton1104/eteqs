@@ -1,0 +1,202 @@
+@extends('layouts.app')
+@section('title', 'Ao vivo — ' . $sala->titulo)
+
+@push('head')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+@endpush
+
+@section('content')
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<input type="hidden" id="sala-id" value="{{ $sala->id }}">
+<input type="hidden" id="proxima-url" value="{{ route('professor.salas.proxima', $sala) }}">
+<input type="hidden" id="finalizar-pergunta-url" value="{{ route('professor.salas.finalizarPergunta', $sala) }}">
+<input type="hidden" id="finalizar-url" value="{{ route('professor.salas.finalizarJogo', $sala) }}">
+
+<div class="container py-4">
+
+    {{-- ===== LOBBY ===== --}}
+    <div id="tela-lobby">
+        <div class="row g-4 align-items-center">
+            <div class="col-md-5 text-center">
+                <div class="card shadow-sm p-3 d-inline-block">
+                    {!! $qrSvg !!}
+                </div>
+                <p class="text-muted small mt-2 mb-0">Escaneie o QR Code ou acesse:</p>
+                <p class="fw-bold">{{ $entrarUrl }}</p>
+                <div class="badge bg-secondary fs-5">PIN: {{ $sala->pin }}</div>
+            </div>
+            <div class="col-md-7">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h1 class="h4 mb-0 fw-bold">Sala ao vivo</h1>
+                    <span class="badge bg-primary fs-6"><span id="total-jogadores">0</span> aluno(s)</span>
+                </div>
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div id="lista-jogadores" class="d-flex flex-wrap gap-2">
+                            <span class="text-muted small">Aguardando alunos entrarem…</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button id="btn-proxima" class="btn btn-gold btn-lg fw-semibold">Iniciar primeira pergunta</button>
+                    <a href="{{ route('professor.salas.show', $sala) }}" class="btn btn-link">Cancelar</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ===== PERGUNTA EM ANDAMENTO ===== --}}
+    <div id="tela-pergunta" class="d-none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge bg-secondary fs-6" id="pergunta-progresso"></span>
+            <span class="badge bg-primary fs-5"><span id="contador">--</span>s</span>
+        </div>
+        <div class="progress mb-3" style="height: 8px;">
+            <div id="barra-tempo" class="progress-bar bg-primary" style="width:100%"></div>
+        </div>
+        <div class="card shadow-sm mb-4">
+            <div class="card-body fs-4 fw-semibold text-center" id="pergunta-texto"></div>
+        </div>
+        <div class="text-center">
+            <button id="btn-finalizar-pergunta" class="btn btn-danger btn-lg">Finalizar pergunta</button>
+        </div>
+    </div>
+
+    {{-- ===== RESULTADOS ===== --}}
+    <div id="tela-resultados" class="d-none">
+        <h1 class="h4 fw-bold mb-1">Resultados da pergunta</h1>
+        <p class="text-muted mb-3"><span id="total-respostas">0</span> de <span id="total-jogadores-resp">0</span> alunos responderam</p>
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <canvas id="grafico" height="120"></canvas>
+            </div>
+        </div>
+        <div class="text-center d-flex gap-2 justify-content-center">
+            <button id="btn-proxima-2" class="btn btn-gold btn-lg fw-semibold">Próxima pergunta</button>
+            <button id="btn-finalizar-jogo" class="btn btn-danger btn-lg d-none">Finalizar jogo</button>
+        </div>
+    </div>
+
+    {{-- ===== FIM ===== --}}
+    <div id="tela-fim" class="d-none text-center">
+        <h1 class="h3 fw-bold mb-2">Jogo encerrado!</h1>
+        <a href="{{ route('professor.salas.relatorio', $sala) }}" class="btn btn-primary btn-lg">Ver relatório</a>
+    </div>
+</div>
+
+<script>
+(function () {
+    const salaId = parseInt(document.getElementById('sala-id').value, 10);
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const FORMAS = { triangulo: '▲', losango: '◆', circulo: '●', quadrado: '■' };
+    const CORES_HEX = { vermelho: '#e21b3c', azul: '#1368ce', amarelo: '#d89e00', verde: '#26890c' };
+
+    let ehUltima = false;
+    let timerId = null;
+    let chart = null;
+
+    function mostrar(id) {
+        ['tela-lobby','tela-pergunta','tela-resultados','tela-fim']
+            .forEach(t => document.getElementById(t).classList.add('d-none'));
+        document.getElementById(id).classList.remove('d-none');
+    }
+
+    async function post(url) {
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
+        });
+        return r.json();
+    }
+
+    // ----- Lobby ao vivo: cada aluno que entra -----
+    function adicionarJogador(j) {
+        const cont = document.getElementById('lista-jogadores');
+        const vazio = cont.querySelector('.text-muted');
+        if (vazio) vazio.remove();
+        if (document.getElementById('jog-' + j.id)) return;
+        const span = document.createElement('span');
+        span.id = 'jog-' + j.id;
+        span.className = 'badge rounded-pill bg-light text-dark border';
+        span.textContent = j.nome + ' ' + j.sobrenome;
+        cont.appendChild(span);
+    }
+    function setTotal(n) { document.getElementById('total-jogadores').textContent = n; }
+
+    // ----- Iniciar/próxima pergunta -----
+    async function proxima() {
+        const data = await post(document.getElementById('proxima-url').value);
+        if (data.fim) { return finalizarJogo(); }
+        ehUltima = !!data.eh_ultima;
+        document.getElementById('pergunta-texto').textContent = data.texto;
+        document.getElementById('pergunta-progresso').textContent =
+            'Pergunta ' + data.ordem + ' de ' + data.total_perguntas;
+        iniciarContagem(data.termina_em, data.tempo_segundos);
+        document.getElementById('btn-proxima').textContent = 'Próxima pergunta';
+        mostrar('tela-pergunta');
+    }
+
+    function iniciarContagem(terminaEmIso, total) {
+        clearInterval(timerId);
+        const fim = new Date(terminaEmIso).getTime();
+        timerId = setInterval(() => {
+            const restante = Math.max(0, (fim - Date.now()) / 1000);
+            document.getElementById('contador').textContent = Math.ceil(restante);
+            document.getElementById('barra-tempo').style.width = ((restante / total) * 100) + '%';
+            if (restante <= 0) { clearInterval(timerId); finalizarPergunta(); }
+        }, 250);
+    }
+
+    // ----- Finalizar pergunta -> gráfico -----
+    async function finalizarPergunta() {
+        clearInterval(timerId);
+        const data = await post(document.getElementById('finalizar-pergunta-url').value);
+        if (data.erro) return;
+
+        const total = data.total_jogadores || 1;
+        document.getElementById('total-respostas').textContent = data.total_respostas;
+        document.getElementById('total-jogadores-resp').textContent = data.total_jogadores;
+
+        const formas = ['▲', '◆', '●', '■'];
+        const labels = data.resultado.map(r =>
+            formas[r.ordem - 1] + '  ' + Math.round((r.qtd / total) * 100) + '%');
+        const valores = data.resultado.map(r => r.qtd);
+        const cores = data.resultado.map(r =>
+            r.correta ? CORES_HEX[r.cor] : CORES_HEX[r.cor] + '99');
+
+        if (chart) chart.destroy();
+        chart = new Chart(document.getElementById('grafico'), {
+            type: 'bar',
+            data: { labels, datasets: [{ data: valores, backgroundColor: cores, borderRadius: 6 }] },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            },
+        });
+
+        document.getElementById('btn-proxima-2').classList.toggle('d-none', ehUltima);
+        document.getElementById('btn-finalizar-jogo').classList.toggle('d-none', !ehUltima);
+        mostrar('tela-resultados');
+    }
+
+    // ----- Finalizar jogo -----
+    async function finalizarJogo() {
+        clearInterval(timerId);
+        await post(document.getElementById('finalizar-url').value);
+        mostrar('tela-fim');
+    }
+
+    // ----- Eventos -----
+    document.getElementById('btn-proxima').addEventListener('click', proxima);
+    document.getElementById('btn-proxima-2').addEventListener('click', proxima);
+    document.getElementById('btn-finalizar-pergunta').addEventListener('click', finalizarPergunta);
+    document.getElementById('btn-finalizar-jogo').addEventListener('click', finalizarJogo);
+
+    window.Echo.channel('sala.' + salaId)
+        .listen('.jogador.entrou', (e) => {
+            adicionarJogador(e.jogador);
+            setTotal(e.total);
+        });
+})();
+</script>
+@endsection
