@@ -90,9 +90,6 @@
     </div>
 </div>
 
-{{-- DEBUG temporário: mostra o estado do tempo real/polling --}}
-<div id="debug" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.82);color:#0f0;font:11px monospace;padding:3px 8px;z-index:3000;pointer-events:none;">iniciando…</div>
-
 <script>
 (function () {
     const salaId = parseInt(document.getElementById('sala-id').value, 10);
@@ -100,13 +97,8 @@
     const csrf = document.getElementById('csrf').value;
     const FORMAS = { triangulo: '▲', losango: '◆', circulo: '●', quadrado: '■' };
 
-    // DEBUG temporário
-    function dbg(msg) {
-        const el = document.getElementById('debug');
-        if (el) el.textContent = msg;
-        console.log('[ETEQS]', msg);
-    }
-    dbg('página carregada');
+    // DEBUG temporário (logs no console; sem painel visível)
+    function dbg(msg) { console.log('[ETEQS]', msg); }
 
     let perguntaAtual = null;
     let minhaAlternativa = null;

@@ -95,6 +95,10 @@ class SalaAoVivoController extends Controller
             'tempo_segundos' => $pergunta->tempo_segundos,
             'termina_em' => $terminaEm->toIso8601String(),
             'eh_ultima' => $nextIdx === $perguntas->count() - 1,
+            'alternativas' => $pergunta->alternativas->map(fn ($a) => [
+                'id' => $a->id, 'texto' => $a->texto, 'cor' => $a->cor,
+                'simbolo' => $a->simbolo, 'ordem' => $a->ordem, 'correta' => $a->correta,
+            ])->values()->toArray(),
         ]);
     }
 

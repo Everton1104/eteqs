@@ -3,6 +3,21 @@
 
 @push('head')
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        .alt-proj {
+            display: flex; align-items: center; gap: .75rem;
+            padding: 1rem 1.25rem; border-radius: .6rem; color: #fff;
+            font-size: 1.15rem; font-weight: 600; min-height: 4.5rem;
+        }
+        .alt-proj-shape {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 2rem; height: 2rem; font-size: 1.4rem; flex-shrink: 0;
+        }
+        .alt-proj-vermelho { background:#e21b3c; }
+        .alt-proj-azul     { background:#1368ce; }
+        .alt-proj-amarelo  { background:#d89e00; }
+        .alt-proj-verde    { background:#26890c; }
+    </style>
 @endpush
 
 @section('content')
@@ -61,9 +76,10 @@
         <div class="progress mb-3" style="height: 8px;">
             <div id="barra-tempo" class="progress-bar bg-primary" style="width:100%"></div>
         </div>
-        <div class="card shadow-sm mb-4">
-            <div class="card-body fs-4 fw-semibold text-center" id="pergunta-texto"></div>
+        <div class="card shadow-sm mb-3">
+            <div class="card-body fs-3 fw-semibold text-center" id="pergunta-texto"></div>
         </div>
+        <div id="pergunta-alternativas" class="row g-2 mb-4"></div>
         <div id="aviso-aguardando" class="text-center text-muted">
             <span class="spinner-border spinner-border-sm me-1"></span>
             O resultado aparece automaticamente quando o tempo acabar.
@@ -145,11 +161,29 @@
         document.getElementById('pergunta-texto').textContent = data.texto;
         document.getElementById('pergunta-progresso').textContent =
             'Pergunta ' + data.ordem + ' de ' + data.total_perguntas;
+        renderizarAlternativas(data.alternativas || []);
         iniciarContagem(data.termina_em, data.tempo_segundos);
         document.getElementById('aviso-aguardando').classList.remove('d-none');
         document.getElementById('aviso-recolhimento').classList.add('d-none');
         document.getElementById('btn-proxima').textContent = 'Próxima pergunta';
         mostrar('tela-pergunta');
+    }
+
+    // Mostra as 4 alternativas (cor + símbolo + texto) na projeção do professor.
+    // Não revela qual é a correta enquanto a pergunta está aberta.
+    function renderizarAlternativas(alternativas) {
+        const cont = document.getElementById('pergunta-alternativas');
+        cont.innerHTML = '';
+        alternativas.forEach(a => {
+            const div = document.createElement('div');
+            div.className = 'col-md-6';
+            div.innerHTML =
+                '<div class="alt-proj alt-proj-' + a.cor + '">' +
+                '<span class="alt-proj-shape">' + (FORMAS[a.simbolo] || '■') + '</span>' +
+                '<span>' + (a.texto || '') + '</span>' +
+                '</div>';
+            cont.appendChild(div);
+        });
     }
 
     function iniciarContagem(terminaEmIso, total) {
