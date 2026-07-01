@@ -8,9 +8,9 @@
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <input type="hidden" id="sala-id" value="{{ $sala->id }}">
-<input type="hidden" id="proxima-url" value="{{ route('professor.salas.proxima', $sala) }}">
-<input type="hidden" id="finalizar-pergunta-url" value="{{ route('professor.salas.finalizarPergunta', $sala) }}">
-<input type="hidden" id="finalizar-url" value="{{ route('professor.salas.finalizarJogo', $sala) }}">
+<input type="hidden" id="proxima-url" value="{{ parse_url(route('professor.salas.proxima', $sala), PHP_URL_PATH) }}">
+<input type="hidden" id="finalizar-pergunta-url" value="{{ parse_url(route('professor.salas.finalizarPergunta', $sala), PHP_URL_PATH) }}">
+<input type="hidden" id="finalizar-url" value="{{ parse_url(route('professor.salas.finalizarJogo', $sala), PHP_URL_PATH) }}">
 
 <div class="container py-4">
 
@@ -88,7 +88,7 @@
     {{-- ===== FIM ===== --}}
     <div id="tela-fim" class="d-none text-center">
         <h1 class="h3 fw-bold mb-2">Jogo encerrado!</h1>
-        <a href="{{ route('professor.salas.relatorio', $sala) }}" class="btn btn-primary btn-lg">Ver relatório</a>
+        <a href="{{ parse_url(route('professor.salas.relatorio', $sala), PHP_URL_PATH) }}" class="btn btn-primary btn-lg">Ver relatório</a>
     </div>
 </div>
 
@@ -215,16 +215,20 @@
             });
 
         // Indicador de status da conexão em tempo real.
-        const badge = document.getElementById('rt-status');
-        if (badge && window.Echo.connector) {
-            const atualizar = (st) => {
-                const ok = st === 'connected';
-                badge.textContent = ok ? 'Tempo real: conectado' : 'Tempo real: ' + st;
-                badge.className = 'badge ' + (ok ? 'bg-success' : 'bg-warning text-dark');
-            };
-            atualizar(window.Echo.connector.connection ? window.Echo.connector.connection.state : 'conectando');
-            window.Echo.connector.bind('state_change', (s) => atualizar(s.current));
-        }
+        try {
+            const badge = document.getElementById('rt-status');
+            const conn = window.Echo.connector;
+            const pusher = conn && conn.pusher; // PusherConnector expõe a instância pusher-js
+            if (badge && pusher && pusher.connection) {
+                const atualizar = (st) => {
+                    const ok = st === 'connected';
+                    badge.textContent = ok ? 'Tempo real: conectado' : 'Tempo real: ' + st;
+                    badge.className = 'badge ' + (ok ? 'bg-success' : 'bg-warning text-dark');
+                };
+                atualizar(pusher.connection.state);
+                pusher.connection.bind('state_change', (s) => atualizar(s.current));
+            }
+        } catch (_) { /* o status é só informativo; não pode quebrar a tela */ }
     }
     ligarEcho();
 })();
