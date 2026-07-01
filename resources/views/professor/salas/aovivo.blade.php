@@ -94,10 +94,14 @@
     <div id="tela-resultados" class="d-none">
         <h1 class="h4 fw-bold mb-1">Resultados da pergunta</h1>
         <p class="text-muted mb-3"><span id="total-respostas">0</span> de <span id="total-jogadores-resp">0</span> alunos responderam</p>
-        <div class="card shadow-sm mb-4">
+        <div class="card shadow-sm mb-3">
             <div class="card-body">
                 <canvas id="grafico" height="120"></canvas>
             </div>
+        </div>
+        <div id="resultado-enunciado" class="fs-4 fw-semibold text-center mb-3"></div>
+        <div class="d-flex justify-content-center mb-4">
+            <div id="resultado-correta"></div>
         </div>
         <div class="text-center d-flex gap-2 justify-content-center">
             <button id="btn-proxima-2" class="btn btn-gold btn-lg fw-semibold">Próxima pergunta</button>
@@ -237,6 +241,19 @@
                 scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
             },
         });
+
+        // Abaixo do gráfico: enunciado + resposta correta (cor e símbolo).
+        document.getElementById('resultado-enunciado').textContent = data.texto || '';
+        const corrEl = document.getElementById('resultado-correta');
+        if (data.correta) {
+            corrEl.innerHTML =
+                '<div class="alt-proj alt-proj-' + data.correta.cor + '">' +
+                '<span class="alt-proj-shape">' + (FORMAS[data.correta.simbolo] || '■') + '</span>' +
+                '<span>' + (data.correta.texto || '') + '</span>' +
+                '</div>';
+        } else {
+            corrEl.innerHTML = '';
+        }
 
         document.getElementById('btn-proxima-2').classList.toggle('d-none', ehUltima);
         document.getElementById('btn-finalizar-jogo').classList.toggle('d-none', !ehUltima);

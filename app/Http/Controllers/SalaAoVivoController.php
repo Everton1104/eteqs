@@ -153,6 +153,12 @@ class SalaAoVivoController extends Controller
         ));
 
         return response()->json([
+            'texto' => $pergunta->texto,
+            'correta' => $correta ? [
+                'texto' => $correta->texto,
+                'cor' => $correta->cor,
+                'simbolo' => $correta->simbolo,
+            ] : null,
             'resultado' => $resultado,
             'total_respostas' => $totalRespostas,
             'total_jogadores' => $totalJogadores,
