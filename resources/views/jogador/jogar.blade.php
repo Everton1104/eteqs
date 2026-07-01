@@ -56,7 +56,7 @@
 </div>
 
 {{-- Resposta enviada --}}
-<div id="tela-respondida" class="card shadow border-0 text-center" style="border-radius: 1rem;">
+<div id="tela-respondida" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <div class="display-3 mb-1">⏳</div>
         <h1 class="h4 fw-bold mb-1">Resposta enviada!</h1>
@@ -65,7 +65,7 @@
 </div>
 
 {{-- Resultado da pergunta --}}
-<div id="tela-resultado" class="card shadow border-0 text-center" style="border-radius: 1rem;">
+<div id="tela-resultado" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <div id="resultado-icon" class="display-3 mb-2"></div>
         <h1 class="h4 fw-bold mb-2" id="resultado-msg"></h1>
@@ -74,7 +74,7 @@
 </div>
 
 {{-- Fim de jogo --}}
-<div id="tela-final" class="card shadow border-0 text-center" style="border-radius: 1rem;">
+<div id="tela-final" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <h1 class="h4 fw-bold mb-2">Jogo encerrado!</h1>
         <p class="text-muted">Sua pontuação final:</p>

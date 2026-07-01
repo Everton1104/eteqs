@@ -28,12 +28,16 @@
             <div class="col-md-7">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h1 class="h4 mb-0 fw-bold">Sala ao vivo</h1>
-                    <span class="badge bg-primary fs-6"><span id="total-jogadores">0</span> aluno(s)</span>
+                    <span class="badge bg-primary fs-6"><span id="total-jogadores">{{ $sala->jogadores->count() }}</span> aluno(s)</span>
                 </div>
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div id="lista-jogadores" class="d-flex flex-wrap gap-2">
-                            <span class="text-muted small">Aguardando alunos entrarem…</span>
+                            @forelse ($sala->jogadores as $j)
+                                <span id="jog-{{ $j->id }}" class="badge rounded-pill bg-light text-dark border">{{ $j->nome }} {{ $j->sobrenome }}</span>
+                            @empty
+                                <span class="text-muted small">Aguardando alunos entrarem…</span>
+                            @endforelse
                         </div>
                     </div>
                 </div>

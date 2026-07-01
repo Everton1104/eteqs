@@ -39,7 +39,7 @@ class SalaAoVivoController extends Controller
     public function aoVivo(Request $request, Sala $sala): View
     {
         $this->authorize('view', $sala);
-        $sala->load('perguntas');
+        $sala->load(['perguntas', 'jogadores']);
 
         $entrarUrl = route('jogador.entrar', $sala->pin);
 
