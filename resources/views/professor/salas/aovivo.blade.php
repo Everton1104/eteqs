@@ -17,6 +17,16 @@
         .alt-proj-azul     { background:#1368ce; }
         .alt-proj-amarelo  { background:#d89e00; }
         .alt-proj-verde    { background:#26890c; }
+        /* QR/pin/link sempre visíveis durante a atividade */
+        #qr-painel {
+            position: fixed; top: 64px; right: 12px; z-index: 1020;
+            width: 190px; padding: .6rem .6rem .4rem; text-align: center;
+        }
+        #qr-painel img, #qr-painel svg { width: 160px; height: 160px; }
+        @media (max-width: 720px) {
+            #qr-painel { width: 130px; top: 56px; }
+            #qr-painel img, #qr-painel svg { width: 108px; height: 108px; }
+        }
     </style>
 @endpush
 
@@ -28,6 +38,14 @@
 <input type="hidden" id="finalizar-url" value="{{ parse_url(route('professor.salas.finalizarJogo', $sala), PHP_URL_PATH) }}">
 
 <div class="container py-4">
+
+    {{-- QR/PIN/link sempre visíveis (lobby, pergunta e resultados) --}}
+    <div id="qr-painel" class="card shadow-sm">
+        <div class="fw-bold small mb-1">Entrar na sala</div>
+        {!! $qrSvg !!}
+        <div class="mt-1"><span class="badge bg-secondary">PIN {{ $sala->pin }}</span></div>
+        <a href="{{ $entrarUrl }}" target="_blank" rel="noopener" class="small text-decoration-none d-block text-break mt-1">{{ $entrarUrl }}</a>
+    </div>
 
     {{-- ===== LOBBY ===== --}}
     <div id="tela-lobby">
@@ -132,6 +150,8 @@
         ['tela-lobby','tela-pergunta','tela-resultados','tela-fim']
             .forEach(t => document.getElementById(t).classList.add('d-none'));
         document.getElementById(id).classList.remove('d-none');
+        const qr = document.getElementById('qr-painel');
+        if (qr) { qr.classList.toggle('d-none', id === 'tela-fim'); }
     }
 
     async function post(url) {
