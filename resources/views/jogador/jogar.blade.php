@@ -1,6 +1,41 @@
 @extends('layouts.jogo')
 @section('title', 'Jogar — ' . $sala->titulo)
 
+@push('head')
+<style>
+    /* 4 quadrantes ocupando a tela toda — só cor + símbolo */
+    #quadrantes {
+        position: fixed;
+        inset: 0;
+        z-index: 1080;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        gap: 4px;
+    }
+    #quadrantes button {
+        border: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: clamp(3.5rem, 18vw, 9rem);
+        line-height: 1;
+        color: #fff;
+        cursor: pointer;
+        transition: filter .08s, transform .05s;
+    }
+    #quadrantes button:active { transform: scale(.98); }
+    #quadrantes button.bloqueado { cursor: default; }
+    #quadrantes button.escolhido { filter: brightness(1.12); box-shadow: inset 0 0 0 6px rgba(255,255,255,.6); }
+    #quadrantes button.dim { filter: grayscale(.6) brightness(.7); }
+    .q-vermelho { background:#e21b3c; }
+    .q-azul     { background:#1368ce; }
+    .q-amarelo  { background:#d89e00; }
+    .q-verde    { background:#26890c; }
+</style>
+@endpush
+
 @section('content')
 <input type="hidden" id="sala-id" value="{{ $sala->id }}">
 <input type="hidden" id="pin" value="{{ $sala->pin }}">
@@ -10,35 +45,27 @@
 <div id="tela-aguardar" class="card shadow border-0 text-center" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <h1 class="h4 fw-bold mb-2">Olá, {{ $jogador->nome }}!</h1>
-        <p class="text-muted mb-0">Aguardando o professor iniciar a pergunta…</p>
+        <p class="text-muted mb-0">Aguardando o professor iniciar…</p>
         <div class="spinner-border text-primary mt-3" role="status"></div>
     </div>
 </div>
 
-{{-- Pergunta em andamento --}}
+{{-- Pergunta: apenas os 4 quadrantes (cor + símbolo) --}}
 <div id="tela-pergunta" class="d-none">
-    <div class="text-center text-white mb-3">
-        <div class="d-inline-block bg-white text-dark rounded-circle fw-bold"
-             style="width:54px;height:54px;line-height:54px;font-size:1.5rem;" id="contador">--</div>
-        <div class="small" id="progresso"></div>
-    </div>
-    <div class="card shadow border-0 mb-3" style="border-radius: .9rem;">
-        <div class="card-body text-center fs-5 fw-semibold" id="pergunta-texto"></div>
-    </div>
-    <div class="row g-2" id="alternativas"></div>
+    <div id="quadrantes"></div>
 </div>
 
 {{-- Resposta enviada --}}
-<div id="tela-respondida" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
+<div id="tela-respondida" class="card shadow border-0 text-center" style="border-radius: 1rem;">
     <div class="card-body p-5">
-        <h1 class="h4 fw-bold mb-2">Resposta enviada!</h1>
+        <div class="display-3 mb-1">⏳</div>
+        <h1 class="h4 fw-bold mb-1">Resposta enviada!</h1>
         <p class="text-muted mb-0">Aguarde o resultado…</p>
-        <div class="spinner-border text-primary mt-3" role="status"></div>
     </div>
 </div>
 
 {{-- Resultado da pergunta --}}
-<div id="tela-resultado" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
+<div id="tela-resultado" class="card shadow border-0 text-center" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <div id="resultado-icon" class="display-3 mb-2"></div>
         <h1 class="h4 fw-bold mb-2" id="resultado-msg"></h1>
@@ -47,7 +74,7 @@
 </div>
 
 {{-- Fim de jogo --}}
-<div id="tela-final" class="card shadow border-0 text-center d-none" style="border-radius: 1rem;">
+<div id="tela-final" class="card shadow border-0 text-center" style="border-radius: 1rem;">
     <div class="card-body p-5">
         <h1 class="h4 fw-bold mb-2">Jogo encerrado!</h1>
         <p class="text-muted">Sua pontuação final:</p>
@@ -65,7 +92,6 @@
     let perguntaAtual = null;
     let minhaAlternativa = null;
     let minhaPontuacao = {{ (int) $jogador->pontuacao }};
-    let timerId = null;
 
     function mostrar(id) {
         ['tela-aguardar','tela-pergunta','tela-respondida','tela-resultado','tela-final']
@@ -73,49 +99,33 @@
         document.getElementById(id).classList.remove('d-none');
     }
 
-    function iniciarContagem(terminaEmIso) {
-        clearInterval(timerId);
-        const fim = new Date(terminaEmIso).getTime();
-        timerId = setInterval(() => {
-            const restante = Math.max(0, Math.round((fim - Date.now()) / 1000));
-            document.getElementById('contador').textContent = restante;
-            if (restante <= 0) clearInterval(timerId);
-        }, 250);
-    }
-
     function renderPergunta(e) {
         perguntaAtual = e.pergunta_id;
         minhaAlternativa = null;
-        document.getElementById('pergunta-texto').textContent = e.texto;
-        document.getElementById('progresso').textContent =
-            'Pergunta ' + e.ordem + ' de ' + e.total_perguntas;
 
-        const cont = document.getElementById('alternativas');
+        const cont = document.getElementById('quadrantes');
         cont.innerHTML = '';
         e.alternativas.forEach(a => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'btn btn-jogador btn-jogador-' + a.cor;
+            btn.className = 'q-' + a.cor;
             btn.dataset.id = a.id;
-            btn.innerHTML = '<span>' + (FORMAS[a.simbolo] || '■') + '</span>';
+            btn.textContent = FORMAS[a.simbolo] || '■';
             btn.onclick = () => responder(a.id, btn);
-            const col = document.createElement('div');
-            col.className = 'col-6';
-            col.appendChild(btn);
-            cont.appendChild(col);
+            cont.appendChild(btn);
         });
 
-        iniciarContagem(e.termina_em);
         mostrar('tela-pergunta');
     }
 
     function responder(altId, btn) {
         if (!perguntaAtual) return;
         minhaAlternativa = altId;
-        document.querySelectorAll('#alternativas button').forEach(b => b.disabled = true);
-        btn.style.opacity = '1';
-        btn.style.transform = 'scale(1.03)';
-        mostrar('tela-respondida');
+        document.querySelectorAll('#quadrantes button').forEach(b => {
+            b.classList.add('bloqueado');
+            if (b !== btn) b.classList.add('dim');
+        });
+        btn.classList.add('escolhido');
 
         fetch('/j/' + pin + '/responder', {
             method: 'POST',
@@ -126,10 +136,11 @@
             },
             body: JSON.stringify({ pergunta_id: perguntaAtual, alternativa_id: altId }),
         }).then(r => r.json()).catch(() => {});
+
+        setTimeout(() => mostrar('tela-respondida'), 450);
     }
 
     function mostrarResultado(e) {
-        clearInterval(timerId);
         const acertei = minhaAlternativa !== null && minhaAlternativa === e.alternativa_correta_id;
         if (acertei) minhaPontuacao++;
         document.getElementById('resultado-icon').textContent = acertei ? '✅' : '❌';
@@ -139,7 +150,6 @@
     }
 
     function mostrarFinal() {
-        clearInterval(timerId);
         document.getElementById('pontuacao-final').textContent = minhaPontuacao;
         mostrar('tela-final');
     }

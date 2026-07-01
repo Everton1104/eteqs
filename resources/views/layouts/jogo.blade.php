@@ -8,6 +8,7 @@
     <link rel="dns-prefetch" href="//fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=Nunito:400,600,700" rel="stylesheet">
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    @stack('head')
     <style>
         body { background: linear-gradient(135deg, #0a3470 0%, #0d47a1 100%); min-height: 100vh; }
         .jogo-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1rem; }
