@@ -90,12 +90,23 @@
     </div>
 </div>
 
+{{-- DEBUG temporário: mostra o estado do tempo real/polling --}}
+<div id="debug" style="position:fixed;bottom:0;left:0;right:0;background:rgba(0,0,0,.82);color:#0f0;font:11px monospace;padding:3px 8px;z-index:3000;pointer-events:none;">iniciando…</div>
+
 <script>
 (function () {
     const salaId = parseInt(document.getElementById('sala-id').value, 10);
     const pin = document.getElementById('pin').value;
     const csrf = document.getElementById('csrf').value;
     const FORMAS = { triangulo: '▲', losango: '◆', circulo: '●', quadrado: '■' };
+
+    // DEBUG temporário
+    function dbg(msg) {
+        const el = document.getElementById('debug');
+        if (el) el.textContent = msg;
+        console.log('[ETEQS]', msg);
+    }
+    dbg('página carregada');
 
     let perguntaAtual = null;
     let minhaAlternativa = null;
@@ -139,6 +150,7 @@
         if (e.minha_alternativa) { marcarEscolhido(e.minha_alternativa); }
         iniciarTrava();
         mostrar('tela-pergunta');
+        dbg('render pergunta ' + e.pergunta_id + ' · alts=' + (e.alternativas ? e.alternativas.length : 0));
     }
 
     function marcarEscolhido(altId) {
@@ -238,11 +250,12 @@
     async function sincronizar() {
         try {
             const r = await fetch('/j/' + pin + '/estado', { headers: { Accept: 'application/json' } });
-            if (!r.ok) return;
+            if (!r.ok) { dbg('sync HTTP ' + r.status); return; }
             const d = await r.json();
+            dbg('sync · status=' + d.status + ' pergunta=' + d.pergunta_id + ' alts=' + (d.alternativas ? d.alternativas.length : 0));
             if (d.status === 'finalizada') { return mostrarFinal(); }
             if (d.pergunta_id && d.pergunta_id !== perguntaAtual) { renderPergunta(d); }
-        } catch (_) {}
+        } catch (e) { dbg('sync erro ' + e); }
     }
     setInterval(sincronizar, 2500);
 
@@ -250,9 +263,13 @@
     function ligarEcho() {
         if (!window.Echo) { return setTimeout(ligarEcho, 80); }
         window.Echo.channel('sala.' + salaId)
-            .listen('.pergunta.iniciada', (e) => { if (e.pergunta_id !== perguntaAtual) renderPergunta(e); })
-            .listen('.pergunta.finalizada', mostrarResultado)
-            .listen('.jogo.finalizado', mostrarFinal);
+            .listen('.pergunta.iniciada', (e) => { dbg('evento .pergunta.iniciada ' + e.pergunta_id + ' alts=' + (e.alternativas ? e.alternativas.length : 0)); if (e.pergunta_id !== perguntaAtual) renderPergunta(e); })
+            .listen('.pergunta.finalizada', (e) => { dbg('evento .pergunta.finalizada'); mostrarResultado(e); })
+            .listen('.jogo.finalizado', () => { dbg('evento .jogo.finalizado'); mostrarFinal(); });
+        dbg('echo inscrito em sala.' + salaId);
+        if (window.Echo.connector && window.Echo.connector.pusher && window.Echo.connector.pusher.connection) {
+            window.Echo.connector.pusher.connection.bind('state_change', (s) => dbg('echo ' + s.current));
+        }
     }
     ligarEcho();
 })();
