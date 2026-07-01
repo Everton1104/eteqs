@@ -154,11 +154,14 @@
 
     function iniciarContagem(terminaEmIso, total) {
         clearInterval(timerId);
-        const fim = new Date(terminaEmIso).getTime();
+        // Conta o tempo decorrido a partir do RECEBIMENTO (Date.now() - início),
+        // e não do termina_em absoluto — assim diferença de relógio entre
+        // servidor/professor/aluno não afeta o cronômetro.
+        const inicio = Date.now();
         timerId = setInterval(() => {
-            const restante = Math.max(0, (fim - Date.now()) / 1000);
-            document.getElementById('contador').textContent = Math.ceil(restante);
-            document.getElementById('barra-tempo').style.width = ((restante / total) * 100) + '%';
+            const restante = total - (Date.now() - inicio) / 1000;
+            document.getElementById('contador').textContent = Math.max(0, Math.ceil(restante));
+            document.getElementById('barra-tempo').style.width = (Math.max(0, restante) / total * 100) + '%';
             if (restante <= 0) { clearInterval(timerId); iniciarRecolhimento(); }
         }, 250);
     }

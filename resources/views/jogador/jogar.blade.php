@@ -100,8 +100,9 @@
     let perguntaAtual = null;
     let minhaAlternativa = null;
     let minhaPontuacao = {{ (int) $jogador->pontuacao }};
-    let terminaEmMs = null;
     let trocaBloqueada = false;
+    let perguntaInicioMs = null;
+    let perguntaTempo = null;
     let travaId = null;
 
     function mostrar(id) {
@@ -114,7 +115,11 @@
         perguntaAtual = e.pergunta_id;
         minhaAlternativa = null;
         trocaBloqueada = false;
-        terminaEmMs = e.termina_em ? new Date(e.termina_em).getTime() : null;
+        // Cronômetro local: a partir do recebimento (imune a desvio de relógio).
+        // Se vier 'restante' (servidor, ex.: reconexão), retroage o início p/ bater.
+        perguntaTempo = e.tempo_segundos || 30;
+        const restanteInicial = (e.restante != null) ? e.restante : perguntaTempo;
+        perguntaInicioMs = Date.now() - (perguntaTempo - restanteInicial) * 1000;
 
         const cont = document.getElementById('quadrantes');
         cont.classList.remove('travado');
@@ -164,14 +169,13 @@
         }).catch(() => {});
     }
 
-    // Cronômetro + trava: troca bloqueada 5s antes do fim (só se já respondeu);
-    // primeira resposta fica aberta até o tempo acabar.
+    // Cronômetro + trava (tempo decorrido local): troca bloqueada 5s antes do
+    // fim (só se já respondeu); primeira resposta fica aberta até o fim.
     function iniciarTrava() {
         clearInterval(travaId);
-        const topo = document.getElementById('contador-topo');
-        topo.classList.remove('d-none');
+        document.getElementById('contador-topo').classList.remove('d-none');
         travaId = setInterval(() => {
-            const restante = terminaEmMs ? (terminaEmMs - Date.now()) / 1000 : 999;
+            const restante = perguntaTempo - (Date.now() - perguntaInicioMs) / 1000;
             document.getElementById('contador-texto').textContent = Math.max(0, Math.ceil(restante)) + 's';
             const respondida = minhaAlternativa !== null;
             if (respondida && restante <= 5) { bloquearTroca(); }
@@ -204,11 +208,6 @@
     }
 
     // ----- Retomar de onde parou (ao reconectar) -----
-    function tempoEsgotado(terminaEmIso) {
-        if (!terminaEmIso) return false;
-        return new Date(terminaEmIso).getTime() <= Date.now();
-    }
-
     async function retomarEstado() {
         try {
             const r = await fetch('/j/' + pin + '/estado', { headers: { 'Accept': 'application/json' } });
@@ -220,8 +219,8 @@
 
             minhaPontuacao = d.pontuacao; // sincroniza com o servidor
 
-            // Tempo já acabou: trava e aguarda o resultado.
-            if (tempoEsgotado(d.termina_em)) {
+            // Tempo já acabou (cálculo do servidor): trava e aguarda o resultado.
+            if (d.restante != null && d.restante <= 0) {
                 minhaAlternativa = d.minha_alternativa;
                 perguntaAtual = d.pergunta_id;
                 return mostrar('tela-respondida');
@@ -234,11 +233,24 @@
     }
     retomarEstado();
 
+    // Backup caso o evento em tempo real se perca (conexão lenta/tarde):
+    // recupera a pergunta atual a cada 2,5s, sem re-renderizar a mesma.
+    async function sincronizar() {
+        try {
+            const r = await fetch('/j/' + pin + '/estado', { headers: { Accept: 'application/json' } });
+            if (!r.ok) return;
+            const d = await r.json();
+            if (d.status === 'finalizada') { return mostrarFinal(); }
+            if (d.pergunta_id && d.pergunta_id !== perguntaAtual) { renderPergunta(d); }
+        } catch (_) {}
+    }
+    setInterval(sincronizar, 2500);
+
     // ----- Tempo real: só liga quando o Echo estiver pronto -----
     function ligarEcho() {
         if (!window.Echo) { return setTimeout(ligarEcho, 80); }
         window.Echo.channel('sala.' + salaId)
-            .listen('.pergunta.iniciada', renderPergunta)
+            .listen('.pergunta.iniciada', (e) => { if (e.pergunta_id !== perguntaAtual) renderPergunta(e); })
             .listen('.pergunta.finalizada', mostrarResultado)
             .listen('.jogo.finalizado', mostrarFinal);
     }

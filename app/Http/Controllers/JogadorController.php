@@ -8,6 +8,7 @@ use App\Models\Alternativa;
 use App\Models\Jogador;
 use App\Models\Resposta;
 use App\Models\Sala;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
@@ -53,7 +54,7 @@ class JogadorController extends Controller
     }
 
     /** Tela do jogo (mobile): aguarda perguntas, mostra alternativas, envia respostas. */
-    public function jogar(string $pin): View
+    public function jogar(string $pin): View|RedirectResponse
     {
         $sala = Sala::where('pin', $pin)->firstOrFail();
         $jogador = $this->jogadorDaSessao($sala);
@@ -144,7 +145,10 @@ class JogadorController extends Controller
 
         $pergunta = $sala->perguntaAtual();
         $terminaEm = ($pergunta && $sala->pergunta_iniciada_em)
-            ? $sala->pergunta_iniciada_em->addSeconds($pergunta->tempo_segundos)->toIso8601String()
+            ? $sala->pergunta_iniciada_em->addSeconds($pergunta->tempo_segundos)
+            : null;
+        $restante = ($pergunta && $sala->pergunta_iniciada_em)
+            ? max(0, $terminaEm->timestamp - now()->timestamp)
             : null;
 
         $resposta = $pergunta
@@ -158,7 +162,8 @@ class JogadorController extends Controller
             'total_perguntas' => $sala->perguntas()->count(),
             'texto' => $pergunta?->texto,
             'tempo_segundos' => $pergunta?->tempo_segundos,
-            'termina_em' => $terminaEm,
+            'termina_em' => $terminaEm?->toIso8601String(),
+            'restante' => $restante,
             'alternativas' => $pergunta
                 ? $pergunta->alternativas->map(fn ($a) => [
                     'id' => $a->id, 'cor' => $a->cor, 'simbolo' => $a->simbolo, 'ordem' => $a->ordem,
