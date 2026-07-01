@@ -212,16 +212,58 @@
 
     function iniciarContagem(terminaEmIso, total) {
         clearInterval(timerId);
+        contagemTocada = false;
         // Conta o tempo decorrido a partir do RECEBIMENTO (Date.now() - início),
         // e não do termina_em absoluto — assim diferença de relógio entre
         // servidor/professor/aluno não afeta o cronômetro.
         const inicio = Date.now();
         timerId = setInterval(() => {
             const restante = total - (Date.now() - inicio) / 1000;
-            document.getElementById('contador').textContent = Math.max(0, Math.ceil(restante));
+            const seg = Math.max(0, Math.ceil(restante));
+            document.getElementById('contador').textContent = seg;
             document.getElementById('barra-tempo').style.width = (Math.max(0, restante) / total * 100) + '%';
+            // Toca o countdown de 10s (1x) ao entrar nos últimos 10 segundos.
+            if (restante <= 10 && restante > 0 && !contagemTocada) {
+                contagemTocada = true;
+                tocarContagem();
+            }
             if (restante <= 0) { clearInterval(timerId); iniciarRecolhimento(); }
-        }, 250);
+        }, 200);
+    }
+
+    // ----- Som: countdown de 10s (só na tela do professor) -----
+    // Usa /storage/10-second-countdown.mp3; se não carregar, bip via Web Audio.
+    let audioCtx = null;
+    let contagemAudio = null;
+    let contagemTocada = false;
+    function tocarContagem() {
+        try {
+            contagemAudio = contagemAudio || new Audio('/storage/10-second-countdown.mp3');
+            contagemAudio.currentTime = 0;
+            const p = contagemAudio.play();
+            if (p && p.catch) p.catch(() => bipContagem());
+        } catch (e) { bipContagem(); }
+    }
+    // Fallback: um bip por segundo (10x) gerado no navegador.
+    function bipContagem() {
+        let n = 0;
+        const id = setInterval(() => {
+            beep(660, 0.13, 0.25);
+            if (++n >= 10) clearInterval(id);
+        }, 1000);
+    }
+    function beep(freq, dur, vol) {
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'sine'; o.frequency.value = freq;
+            g.gain.value = vol; o.connect(g); g.connect(audioCtx.destination);
+            const t = audioCtx.currentTime;
+            o.start(t); o.stop(t + dur);
+            g.gain.setValueAtTime(vol, t);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        } catch (e) {}
     }
 
     // Após o tempo: aguarda 3s para recolher respostas de conexões lentas.

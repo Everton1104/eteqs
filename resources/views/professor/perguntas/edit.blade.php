@@ -20,7 +20,7 @@
                         </div>
                         <div class="mb-4">
                             <label for="tempo_segundos" class="form-label fw-semibold">Tempo para responder (segundos)</label>
-                            <input id="tempo_segundos" type="number" min="3" max="300" name="tempo_segundos" value="{{ old('tempo_segundos', $pergunta->tempo_segundos) }}" class="form-control @error('tempo_segundos') is-invalid @enderror" required>
+                            <input id="tempo_segundos" type="number" min="10" max="300" name="tempo_segundos" value="{{ old('tempo_segundos', $pergunta->tempo_segundos) }}" class="form-control @error('tempo_segundos') is-invalid @enderror" required>
                             @error('tempo_segundos') <div class="invalid-feedback">{{ $message }}</div> @enderror
                         </div>
 

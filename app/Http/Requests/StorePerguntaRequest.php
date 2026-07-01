@@ -15,7 +15,7 @@ class StorePerguntaRequest extends FormRequest
     {
         return [
             'texto' => ['required', 'string', 'max:2000'],
-            'tempo_segundos' => ['required', 'integer', 'min:3', 'max:300'],
+            'tempo_segundos' => ['required', 'integer', 'min:10', 'max:300'],
             'alternativas' => ['required', 'array', 'size:4'],
             'alternativas.*.texto' => ['required', 'string', 'max:500'],
             'correta' => ['required', 'integer', 'in:1,2,3,4'],
