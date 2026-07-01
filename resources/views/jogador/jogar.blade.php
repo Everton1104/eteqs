@@ -77,6 +77,7 @@
     <div class="card-body p-5">
         <div id="resultado-icon" class="display-3 mb-2"></div>
         <h1 class="h4 fw-bold mb-2" id="resultado-msg"></h1>
+        <div id="resultado-detalhe" class="mb-3"></div>
         <p class="text-muted mb-0">Pontuação: <strong id="pontuacao-atual">{{ $jogador->pontuacao }}</strong></p>
     </div>
 </div>
@@ -102,6 +103,7 @@
 
     let perguntaAtual = null;
     let minhaAlternativa = null;
+    let alternativasAtuais = [];
     let minhaPontuacao = {{ (int) $jogador->pontuacao }};
     let trocaBloqueada = false;
     let perguntaInicioMs = null;
@@ -118,6 +120,7 @@
         perguntaAtual = e.pergunta_id;
         minhaAlternativa = null;
         trocaBloqueada = false;
+        alternativasAtuais = e.alternativas || [];
         // Cronômetro local: a partir do recebimento (imune a desvio de relógio).
         // Se vier 'restante' (servidor, ex.: reconexão), retroage o início p/ bater.
         perguntaTempo = e.tempo_segundos || 30;
@@ -197,12 +200,33 @@
             : 'Resposta confirmada · aguardando o resultado');
     }
 
+    function chipResposta(alt) {
+        if (!alt) return '';
+        const hex = { vermelho:'#e21b3c', azul:'#1368ce', amarelo:'#d89e00', verde:'#26890c' }[alt.cor] || '#666';
+        return '<span style="display:inline-flex;align-items:center;gap:.45rem;background:' + hex +
+            ';color:#fff;padding:.45rem .9rem;border-radius:.6rem;font-weight:700;font-size:1.3rem;">' +
+            (FORMAS[alt.simbolo] || '■') + '</span>';
+    }
+
     function mostrarResultado(e) {
         const acertei = minhaAlternativa !== null && minhaAlternativa === e.alternativa_correta_id;
         if (acertei) minhaPontuacao++;
         document.getElementById('resultado-icon').textContent = acertei ? '✅' : '❌';
         document.getElementById('resultado-msg').textContent = acertei ? 'Você acertou!' : 'Resposta incorreta';
         document.getElementById('pontuacao-atual').textContent = minhaPontuacao;
+
+        // Mostra a resposta escolhida (e a correta, se errou).
+        const escolhida = alternativasAtuais.find(a => a.id === minhaAlternativa);
+        const corretaAlt = alternativasAtuais.find(a => a.id === e.alternativa_correta_id);
+        let html = '';
+        if (escolhida) {
+            html += '<div class="text-muted small">Você escolheu</div>' + chipResposta(escolhida);
+        }
+        if (!acertei && corretaAlt) {
+            html += '<div class="text-muted small mt-3">Resposta correta</div>' + chipResposta(corretaAlt);
+        }
+        document.getElementById('resultado-detalhe').innerHTML = html;
+
         mostrar('tela-resultado');
     }
 
