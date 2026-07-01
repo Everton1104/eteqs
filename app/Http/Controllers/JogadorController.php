@@ -119,4 +119,45 @@ class JogadorController extends Controller
 
         return $id ? Jogador::find($id) : null;
     }
+
+    /**
+     * Estado atual da sala sob a ótica do jogador — usado para retomar
+     * de onde parou ao reconectar (refresh, queda de rede, reabrir o link).
+     */
+    public function estado(string $pin)
+    {
+        $sala = Sala::where('pin', $pin)->firstOrFail();
+        $jogador = $this->jogadorDaSessao($sala);
+
+        if (! $jogador) {
+            return response()->json(['erro' => 'Sessão expirada.'], 403);
+        }
+
+        $pergunta = $sala->perguntaAtual();
+        $terminaEm = ($pergunta && $sala->pergunta_iniciada_em)
+            ? $sala->pergunta_iniciada_em->addSeconds($pergunta->tempo_segundos)->toIso8601String()
+            : null;
+
+        $resposta = $pergunta
+            ? Resposta::where('jogador_id', $jogador->id)->where('pergunta_id', $pergunta->id)->first()
+            : null;
+
+        return response()->json([
+            'status' => $sala->status,
+            'pergunta_id' => $pergunta?->id,
+            'ordem' => $pergunta?->ordem,
+            'total_perguntas' => $sala->perguntas()->count(),
+            'texto' => $pergunta?->texto,
+            'tempo_segundos' => $pergunta?->tempo_segundos,
+            'termina_em' => $terminaEm,
+            'alternativas' => $pergunta
+                ? $pergunta->alternativas->map(fn ($a) => [
+                    'id' => $a->id, 'cor' => $a->cor, 'simbolo' => $a->simbolo, 'ordem' => $a->ordem,
+                ])->values()->toArray()
+                : [],
+            'respondida' => (bool) $resposta,
+            'minha_alternativa' => $resposta?->alternativa_id,
+            'pontuacao' => $jogador->pontuacao,
+        ]);
+    }
 }

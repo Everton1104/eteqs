@@ -27,6 +27,7 @@ Auth::routes(['register' => false]);
 Route::get('/j/{pin}', [JogadorController::class, 'entrar'])->name('jogador.entrar');
 Route::post('/j/{pin}', [JogadorController::class, 'registrar'])->name('jogador.registrar');
 Route::get('/j/{pin}/jogar', [JogadorController::class, 'jogar'])->name('jogador.jogar');
+Route::get('/j/{pin}/estado', [JogadorController::class, 'estado'])->name('jogador.estado');
 Route::post('/j/{pin}/responder', [JogadorController::class, 'responder'])->name('jogador.responder');
 
 // Área do administrador (gerencia professores + usa as salas como professor).

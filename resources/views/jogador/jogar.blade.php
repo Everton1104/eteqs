@@ -154,10 +154,45 @@
         mostrar('tela-final');
     }
 
-    window.Echo.channel('sala.' + salaId)
-        .listen('.pergunta.iniciada', renderPergunta)
-        .listen('.pergunta.finalizada', mostrarResultado)
-        .listen('.jogo.finalizado', mostrarFinal);
+    // ----- Retomar de onde parou (ao reconectar) -----
+    function tempoEsgotado(terminaEmIso) {
+        if (!terminaEmIso) return false;
+        return new Date(terminaEmIso).getTime() <= Date.now();
+    }
+
+    async function retomarEstado() {
+        try {
+            const r = await fetch('/j/' + pin + '/estado', { headers: { 'Accept': 'application/json' } });
+            if (r.status === 403) return; // sem sessão: continua em "aguardando"
+            const d = await r.json();
+
+            if (d.status === 'finalizada') { return mostrarFinal(); }
+            if (!d.pergunta_id) { return mostrar('tela-aguardar'); }
+
+            minhaPontuacao = d.pontuacao; // sincroniza com o servidor
+
+            // Já respondeu ou o tempo acabou -> aguarda o resultado.
+            if (d.respondida || tempoEsgotado(d.termina_em)) {
+                minhaAlternativa = d.minha_alternativa; // preserva a escolha para o resultado
+                perguntaAtual = d.pergunta_id;
+                return mostrar('tela-respondida');
+            }
+
+            // Pergunta em andamento e ainda não respondeu: mostra os quadrantes.
+            renderPergunta(d);
+        } catch (_) { /* sem rede: fica no estado atual e tenta via Echo */ }
+    }
+    retomarEstado();
+
+    // ----- Tempo real: só liga quando o Echo estiver pronto -----
+    function ligarEcho() {
+        if (!window.Echo) { return setTimeout(ligarEcho, 80); }
+        window.Echo.channel('sala.' + salaId)
+            .listen('.pergunta.iniciada', renderPergunta)
+            .listen('.pergunta.finalizada', mostrarResultado)
+            .listen('.jogo.finalizado', mostrarFinal);
+    }
+    ligarEcho();
 })();
 </script>
 @endsection

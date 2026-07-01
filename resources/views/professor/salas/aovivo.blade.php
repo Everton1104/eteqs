@@ -28,7 +28,10 @@
             <div class="col-md-7">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h1 class="h4 mb-0 fw-bold">Sala ao vivo</h1>
-                    <span class="badge bg-primary fs-6"><span id="total-jogadores">{{ $sala->jogadores->count() }}</span> aluno(s)</span>
+                    <span>
+                        <span id="rt-status" class="badge bg-warning text-dark me-1">Tempo real: conectando…</span>
+                        <span class="badge bg-primary fs-6"><span id="total-jogadores">{{ $sala->jogadores->count() }}</span> aluno(s)</span>
+                    </span>
                 </div>
                 <div class="card shadow-sm">
                     <div class="card-body">
@@ -200,11 +203,30 @@
     document.getElementById('btn-proxima-2').addEventListener('click', proxima);
     document.getElementById('btn-finalizar-jogo').addEventListener('click', finalizarJogo);
 
-    window.Echo.channel('sala.' + salaId)
-        .listen('.jogador.entrou', (e) => {
-            adicionarJogador(e.jogador);
-            setTotal(e.total);
-        });
+    // O app.js (module/deferred) define window.Echo DEPOIS deste script inline.
+    // Aguardamos o Echo ficar pronto antes de assinar o canal.
+    function ligarEcho() {
+        if (!window.Echo) { return setTimeout(ligarEcho, 80); }
+
+        window.Echo.channel('sala.' + salaId)
+            .listen('.jogador.entrou', (e) => {
+                adicionarJogador(e.jogador);
+                setTotal(e.total);
+            });
+
+        // Indicador de status da conexão em tempo real.
+        const badge = document.getElementById('rt-status');
+        if (badge && window.Echo.connector) {
+            const atualizar = (st) => {
+                const ok = st === 'connected';
+                badge.textContent = ok ? 'Tempo real: conectado' : 'Tempo real: ' + st;
+                badge.className = 'badge ' + (ok ? 'bg-success' : 'bg-warning text-dark');
+            };
+            atualizar(window.Echo.connector.connection ? window.Echo.connector.connection.state : 'conectando');
+            window.Echo.connector.bind('state_change', (s) => atualizar(s.current));
+        }
+    }
+    ligarEcho();
 })();
 </script>
 @endsection
