@@ -64,9 +64,13 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body fs-4 fw-semibold text-center" id="pergunta-texto"></div>
         </div>
-        <div class="text-center text-muted">
+        <div id="aviso-aguardando" class="text-center text-muted">
             <span class="spinner-border spinner-border-sm me-1"></span>
             O resultado aparece automaticamente quando o tempo acabar.
+        </div>
+        <div id="aviso-recolhimento" class="text-center d-none">
+            <span class="spinner-border spinner-border-sm me-1"></span>
+            Recolhendo as últimas respostas...
         </div>
     </div>
 
@@ -142,6 +146,8 @@
         document.getElementById('pergunta-progresso').textContent =
             'Pergunta ' + data.ordem + ' de ' + data.total_perguntas;
         iniciarContagem(data.termina_em, data.tempo_segundos);
+        document.getElementById('aviso-aguardando').classList.remove('d-none');
+        document.getElementById('aviso-recolhimento').classList.add('d-none');
         document.getElementById('btn-proxima').textContent = 'Próxima pergunta';
         mostrar('tela-pergunta');
     }
@@ -153,8 +159,17 @@
             const restante = Math.max(0, (fim - Date.now()) / 1000);
             document.getElementById('contador').textContent = Math.ceil(restante);
             document.getElementById('barra-tempo').style.width = ((restante / total) * 100) + '%';
-            if (restante <= 0) { clearInterval(timerId); finalizarPergunta(); }
+            if (restante <= 0) { clearInterval(timerId); iniciarRecolhimento(); }
         }, 250);
+    }
+
+    // Após o tempo: aguarda 3s para recolher respostas de conexões lentas.
+    function iniciarRecolhimento() {
+        if (finalizando) return;
+        document.getElementById('contador').textContent = '⏳';
+        document.getElementById('aviso-aguardando').classList.add('d-none');
+        document.getElementById('aviso-recolhimento').classList.remove('d-none');
+        setTimeout(finalizarPergunta, 3000);
     }
 
     // ----- Finalizar pergunta -> gráfico (só quando o tempo acaba) -----

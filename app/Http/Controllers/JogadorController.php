@@ -93,16 +93,25 @@ class JogadorController extends Controller
             return response()->json(['erro' => 'Pergunta/alternativa inválida.'], 422);
         }
 
-        // Bloqueia respostas após o tempo da pergunta.
+        // Controle de tempo:
+        // - primeira resposta: aceita até o tempo acabar;
+        // - trocar de alternativa: só até 5s antes do fim.
         if ($sala->pergunta_iniciada_em) {
             $terminaEm = $sala->pergunta_iniciada_em->addSeconds($pergunta->tempo_segundos);
-            if (Carbon::now()->gt($terminaEm)) {
-                return response()->json(['erro' => 'Tempo encerrado.'], 410);
+            $jaRespondeu = Resposta::where('jogador_id', $jogador->id)
+                ->where('pergunta_id', $pergunta->id)->exists();
+            // 1ª resposta: até 3s após o fim (tolerância p/ conexão lenta).
+            // Troca: só até 5s antes do fim.
+            $limite = $jaRespondeu ? $terminaEm->copy()->subSeconds(5) : $terminaEm->copy()->addSeconds(3);
+
+            if (Carbon::now()->gt($limite)) {
+                return response()->json(['erro' => $jaRespondeu ? 'Tempo para trocar encerrado.' : 'Tempo encerrado.'], 410);
             }
         }
 
-        // Uma resposta por jogador/pergunta.
-        $resposta = Resposta::firstOrCreate(
+        // Uma resposta por jogador/pergunta — mas o aluno pode TROCAR enquanto o
+        // tempo não acabou (updateOrCreate atualiza a alternativa escolhida).
+        $resposta = Resposta::updateOrCreate(
             ['jogador_id' => $jogador->id, 'pergunta_id' => $pergunta->id],
             [
                 'alternativa_id' => $alternativa->id,
@@ -110,7 +119,7 @@ class JogadorController extends Controller
             ]
         );
 
-        return response()->json(['ok' => true, 'registrada' => $resposta->wasRecentlyCreated]);
+        return response()->json(['ok' => true, 'alternativa_id' => $alternativa->id]);
     }
 
     protected function jogadorDaSessao(Sala $sala): ?Jogador

@@ -26,9 +26,15 @@
         transition: filter .08s, transform .05s;
     }
     #quadrantes button:active { transform: scale(.98); }
-    #quadrantes button.bloqueado { cursor: default; }
     #quadrantes button.escolhido { filter: brightness(1.12); box-shadow: inset 0 0 0 6px rgba(255,255,255,.6); }
-    #quadrantes button.dim { filter: grayscale(.6) brightness(.7); }
+    #quadrantes.travado button { cursor: default; }
+    #quadrantes.travado button:not(.escolhido) { filter: brightness(.4) saturate(.4); }
+    #quadrantes.travado button.escolhido { box-shadow: inset 0 0 0 6px rgba(255,255,255,.85); }
+    /* cronômetro e aviso sobrepostos aos quadrantes */
+    #contador-topo { position: fixed; top: 10px; left: 0; right: 0; text-align: center; z-index: 1090; pointer-events: none; }
+    #contador-topo span { background: rgba(0,0,0,.55); color:#fff; padding:.3rem 1rem; border-radius:999px; font-weight:700; font-size:1.1rem; }
+    #resposta-hint { position: fixed; bottom: 12px; left: 0; right: 0; text-align: center; z-index: 1090; pointer-events: none; }
+    #resposta-hint span { background: rgba(0,0,0,.7); color:#fff; padding:.35rem .9rem; border-radius:999px; font-size:.85rem; }
     .q-vermelho { background:#e21b3c; }
     .q-azul     { background:#1368ce; }
     .q-amarelo  { background:#d89e00; }
@@ -52,6 +58,8 @@
 
 {{-- Pergunta: apenas os 4 quadrantes (cor + símbolo) --}}
 <div id="tela-pergunta" class="d-none">
+    <div id="contador-topo" class="d-none"><span id="contador-texto">--</span></div>
+    <div id="resposta-hint" class="d-none"><span id="resposta-hint-texto">Resposta enviada · toque para trocar antes do tempo acabar</span></div>
     <div id="quadrantes"></div>
 </div>
 
@@ -92,6 +100,9 @@
     let perguntaAtual = null;
     let minhaAlternativa = null;
     let minhaPontuacao = {{ (int) $jogador->pontuacao }};
+    let terminaEmMs = null;
+    let trocaBloqueada = false;
+    let travaId = null;
 
     function mostrar(id) {
         ['tela-aguardar','tela-pergunta','tela-respondida','tela-resultado','tela-final']
@@ -102,8 +113,11 @@
     function renderPergunta(e) {
         perguntaAtual = e.pergunta_id;
         minhaAlternativa = null;
+        trocaBloqueada = false;
+        terminaEmMs = e.termina_em ? new Date(e.termina_em).getTime() : null;
 
         const cont = document.getElementById('quadrantes');
+        cont.classList.remove('travado');
         cont.innerHTML = '';
         e.alternativas.forEach(a => {
             const btn = document.createElement('button');
@@ -111,33 +125,68 @@
             btn.className = 'q-' + a.cor;
             btn.dataset.id = a.id;
             btn.textContent = FORMAS[a.simbolo] || '■';
-            btn.onclick = () => responder(a.id, btn);
+            btn.onclick = () => responder(a.id);
             cont.appendChild(btn);
         });
 
+        setHint(null);
+        // Retomando uma escolha já feita (reconexão): marca e permite trocar.
+        if (e.minha_alternativa) { marcarEscolhido(e.minha_alternativa); }
+        iniciarTrava();
         mostrar('tela-pergunta');
     }
 
-    function responder(altId, btn) {
-        if (!perguntaAtual) return;
+    function marcarEscolhido(altId) {
         minhaAlternativa = altId;
         document.querySelectorAll('#quadrantes button').forEach(b => {
-            b.classList.add('bloqueado');
-            if (b !== btn) b.classList.add('dim');
+            b.classList.toggle('escolhido', String(b.dataset.id) === String(altId));
         });
-        btn.classList.add('escolhido');
+    }
+
+    function setHint(msg) {
+        const box = document.getElementById('resposta-hint');
+        const txt = document.getElementById('resposta-hint-texto');
+        if (msg) { txt.textContent = msg; box.classList.remove('d-none'); }
+        else { box.classList.add('d-none'); }
+    }
+
+    function responder(altId) {
+        if (!perguntaAtual || trocaBloqueada) return;
+        marcarEscolhido(altId);
+        setHint('Resposta enviada · toque em outra para trocar');
 
         fetch('/j/' + pin + '/responder', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrf,
-            },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf },
             body: JSON.stringify({ pergunta_id: perguntaAtual, alternativa_id: altId }),
-        }).then(r => r.json()).catch(() => {});
+        }).then(r => r.json()).then(d => {
+            if (d && d.erro && d.erro.indexOf('trocar') !== -1) { bloquearTroca(); }
+        }).catch(() => {});
+    }
 
-        setTimeout(() => mostrar('tela-respondida'), 450);
+    // Cronômetro + trava: troca bloqueada 5s antes do fim (só se já respondeu);
+    // primeira resposta fica aberta até o tempo acabar.
+    function iniciarTrava() {
+        clearInterval(travaId);
+        const topo = document.getElementById('contador-topo');
+        topo.classList.remove('d-none');
+        travaId = setInterval(() => {
+            const restante = terminaEmMs ? (terminaEmMs - Date.now()) / 1000 : 999;
+            document.getElementById('contador-texto').textContent = Math.max(0, Math.ceil(restante)) + 's';
+            const respondida = minhaAlternativa !== null;
+            if (respondida && restante <= 5) { bloquearTroca(); }
+            if (!respondida && restante <= 0) { bloquearTroca(); }
+            if (restante <= -4) { clearInterval(travaId); }
+        }, 250);
+    }
+
+    function bloquearTroca() {
+        if (trocaBloqueada) return;
+        trocaBloqueada = true;
+        document.getElementById('quadrantes').classList.add('travado');
+        setHint(minhaAlternativa === null
+            ? 'Tempo encerrado · aguardando o resultado'
+            : 'Resposta confirmada · aguardando o resultado');
     }
 
     function mostrarResultado(e) {
@@ -171,14 +220,15 @@
 
             minhaPontuacao = d.pontuacao; // sincroniza com o servidor
 
-            // Já respondeu ou o tempo acabou -> aguarda o resultado.
-            if (d.respondida || tempoEsgotado(d.termina_em)) {
-                minhaAlternativa = d.minha_alternativa; // preserva a escolha para o resultado
+            // Tempo já acabou: trava e aguarda o resultado.
+            if (tempoEsgotado(d.termina_em)) {
+                minhaAlternativa = d.minha_alternativa;
                 perguntaAtual = d.pergunta_id;
                 return mostrar('tela-respondida');
             }
 
-            // Pergunta em andamento e ainda não respondeu: mostra os quadrantes.
+            // Ainda há tempo: mostra os quadrantes. Se já respondeu, a escolha
+            // fica marcada e pode trocar (até 5s antes do fim).
             renderPergunta(d);
         } catch (_) { /* sem rede: fica no estado atual e tenta via Echo */ }
     }
