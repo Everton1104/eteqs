@@ -20,6 +20,11 @@ class Pergunta extends Model
         return $this->hasMany(Alternativa::class)->orderBy('ordem');
     }
 
+    public function respostas(): HasMany
+    {
+        return $this->hasMany(Resposta::class);
+    }
+
     /** Alternativa correta. */
     public function alternativaCorreta()
     {

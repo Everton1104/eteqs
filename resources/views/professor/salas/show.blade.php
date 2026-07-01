@@ -12,7 +12,22 @@
         </div>
         <div class="text-end">
             <span class="badge bg-secondary fs-6 mb-2 d-block">PIN: {{ $sala->pin }}</span>
+            @php
+                $statusLabel = ['aguardando' => ['Aguardando','secondary'], 'ativa' => ['Em andamento','success'], 'finalizada' => ['Encerrada','danger']][$sala->status] ?? ['','secondary'];
+            @endphp
+            <span class="badge bg-{{ $statusLabel[1] }} mb-2 d-block">{{ $statusLabel[0] }}</span>
             <a href="{{ route('professor.salas.edit', $sala) }}" class="btn btn-sm btn-outline-secondary">Editar sala</a>
+            <form method="POST" action="{{ route('professor.salas.duplicar', $sala) }}" class="d-inline">
+                @csrf
+                <button class="btn btn-sm btn-outline-secondary" title="Criar uma cópia desta sala">Duplicar</button>
+            </form>
+            @if ($sala->status !== \App\Models\Sala::STATUS_FINALIZADA)
+                <form method="POST" action="{{ route('professor.salas.encerrar', $sala) }}" class="d-inline"
+                      onsubmit="return confirm('Encerrar a sala? Ninguém mais poderá entrar.');">
+                    @csrf
+                    <button class="btn btn-sm btn-outline-danger" title="Bloquear a entrada de novos alunos">Encerrar sala</button>
+                </form>
+            @endif
         </div>
     </div>
 

@@ -13,10 +13,23 @@
             <h1 class="h3 mb-1 fw-bold mt-1">Relatório — {{ $sala->titulo }}</h1>
             <p class="text-muted mb-0">{{ $totalPerguntas }} pergunta(s) · {{ $jogadores->count() }} aluno(s)</p>
         </div>
-        <form action="{{ route('professor.salas.arquivar', $sala) }}" method="POST" class="d-inline">
-            @csrf
-            <button class="btn btn-outline-secondary btn-sm">Arquivar sala</button>
-        </form>
+        <div class="d-flex gap-2">
+            <form method="POST" action="{{ route('professor.salas.duplicar', $sala) }}" class="d-inline">
+                @csrf
+                <button class="btn btn-outline-secondary btn-sm">Duplicar sala</button>
+            </form>
+            @if ($sala->status !== \App\Models\Sala::STATUS_FINALIZADA)
+                <form method="POST" action="{{ route('professor.salas.encerrar', $sala) }}" class="d-inline"
+                      onsubmit="return confirm('Encerrar a sala? Ninguém mais poderá entrar.');">
+                    @csrf
+                    <button class="btn btn-outline-danger btn-sm">Encerrar sala</button>
+                </form>
+            @endif
+            <form method="POST" action="{{ route('professor.salas.arquivar', $sala) }}" class="d-inline">
+                @csrf
+                <button class="btn btn-outline-secondary btn-sm">Arquivar</button>
+            </form>
+        </div>
     </div>
 
     @if ($jogadores->isEmpty())
@@ -29,13 +42,12 @@
         @php
             $totais = $jogadores->pluck('acertos');
             $media = $totalPerguntas > 0 ? round($totais->avg() / $totalPerguntas * 100) : 0;
+            $totalAlunos = $jogadores->count();
         @endphp
 
-        {{-- Gráfico geral --}}
+        {{-- Visão geral --}}
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h2 class="h5 mb-0 fw-bold">Visão geral</h2>
-            </div>
+            <div class="card-header bg-white"><h2 class="h5 mb-0 fw-bold">Visão geral</h2></div>
             <div class="card-body">
                 <div class="row text-center mb-3 g-3">
                     <div class="col"><div class="fw-bold fs-4 text-primary">{{ $media }}%</div><div class="text-muted small">Aproveitamento médio da turma</div></div>
@@ -46,9 +58,40 @@
             </div>
         </div>
 
-        {{-- Tabela detalhada --}}
+        {{-- Perguntas (gabarito + desempenho da turma) --}}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white"><h2 class="h6 mb-0 fw-bold">Perguntas</h2></div>
+            <div class="card-body">
+                @foreach ($perguntas as $i => $pergunta)
+                    @php
+                        $pct = $totalAlunos > 0 ? round($pergunta->acertos_total / $totalAlunos * 100) : 0;
+                    @endphp
+                    <div class="{{ $loop->last ? '' : 'border-bottom pb-3 mb-3' }}">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                            <span class="fw-semibold">{{ $loop->iteration }}. {{ $pergunta->texto }}</span>
+                            <span class="badge {{ $pct >= 70 ? 'bg-success' : ($pct >= 50 ? 'bg-warning text-dark' : 'bg-danger') }}">
+                                {{ $pergunta->acertos_total }}/{{ $totalAlunos }} acertaram ({{ $pct }}%)
+                            </span>
+                        </div>
+                        <div class="row g-1">
+                            @foreach ($pergunta->alternativas as $alt)
+                                <div class="col-md-6">
+                                    <div class="alt-mini alt-{{ $alt->cor }} {{ $alt->correta ? 'alt-correta' : '' }}">
+                                        <span class="alt-shape alt-shape-{{ $alt->cor }}">{{ \App\Models\Sala::CORES[$alt->ordem]['forma'] ?? '■' }}</span>
+                                        <span>{{ $alt->texto }}</span>
+                                        @if ($alt->correta) <span class="badge bg-success ms-auto">correta</span> @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Resumo por aluno (nomes + respostas) --}}
         <div class="card shadow-sm">
-            <div class="card-header bg-white"><h2 class="h6 mb-0 fw-bold">Acertos por aluno</h2></div>
+            <div class="card-header bg-white"><h2 class="h6 mb-0 fw-bold">Resumo por aluno</h2></div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -98,9 +141,7 @@
         options: {
             indexAxis: 'y',
             plugins: { legend: { display: false } },
-            scales: {
-                x: { beginAtZero: true, max: total, ticks: { stepSize: 1 } },
-            },
+            scales: { x: { beginAtZero: true, max: total, ticks: { stepSize: 1 } } },
         },
     });
 })();

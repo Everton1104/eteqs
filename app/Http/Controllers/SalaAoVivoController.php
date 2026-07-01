@@ -174,11 +174,19 @@ class SalaAoVivoController extends Controller
         ]);
     }
 
-    /** Relatório final: acertos de cada aluno. */
+    /** Relatório final: perguntas (com gabarito) e acertos de cada aluno. */
     public function relatorio(Request $request, Sala $sala): View
     {
         $this->authorize('view', $sala);
-        $sala->load(['perguntas.alternativas', 'jogadores']);
+
+        $perguntas = $sala->perguntas()
+            ->with(['alternativas' => fn ($q) => $q->orderBy('ordem')])
+            ->withCount([
+                'respostas as respostas_total',
+                'respostas as acertos_total' => fn ($q) => $q->where('correta', true),
+            ])
+            ->orderBy('ordem')
+            ->get();
 
         $jogadores = $sala->jogadores()
             ->withCount(['respostas as acertos' => fn ($q) => $q->where('correta', true)])
@@ -186,9 +194,9 @@ class SalaAoVivoController extends Controller
             ->orderBy('nome')
             ->get();
 
-        $totalPerguntas = $sala->perguntas->count();
+        $totalPerguntas = $perguntas->count();
 
-        return view('professor.salas.relatorio', compact('sala', 'jogadores', 'totalPerguntas'));
+        return view('professor.salas.relatorio', compact('sala', 'perguntas', 'jogadores', 'totalPerguntas'));
     }
 
     /** Estado serializado da sala para a tela do professor (JS). */

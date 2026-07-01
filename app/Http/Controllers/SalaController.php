@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSalaRequest;
 use App\Models\Sala;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SalaController extends Controller
@@ -121,5 +122,66 @@ class SalaController extends Controller
         return redirect()
             ->route('professor.salas.arquivadas')
             ->with('success', 'Sala desarquivada.');
+    }
+
+    /**
+     * Encerra a sala: bloqueia a entrada de novos alunos (status = finalizada).
+     */
+    public function encerrar(Request $request, Sala $sala): RedirectResponse
+    {
+        $this->authorize('update', $sala);
+
+        $sala->update([
+            'status' => Sala::STATUS_FINALIZADA,
+            'pergunta_atual' => null,
+            'pergunta_iniciada_em' => null,
+        ]);
+
+        return redirect()
+            ->route('professor.salas.show', $sala)
+            ->with('success', 'Sala encerrada. Ninguém mais pode entrar.');
+    }
+
+    /**
+     * Duplica a sala (título, descrição e todas as perguntas/alternativas),
+     * com um novo PIN e status aguardando.
+     */
+    public function duplicar(Request $request, Sala $sala): RedirectResponse
+    {
+        $this->authorize('view', $sala);
+        $sala->load(['perguntas.alternativas']);
+
+        $nova = DB::transaction(function () use ($sala, $request) {
+            $copia = Sala::create([
+                'user_id' => $request->user()->id,
+                'titulo' => $sala->titulo.' (cópia)',
+                'descricao' => $sala->descricao,
+                'pin' => Sala::gerarPinUnico(),
+                'status' => Sala::STATUS_AGUARDANDO,
+            ]);
+
+            foreach ($sala->perguntas as $pergunta) {
+                $novaPergunta = $copia->perguntas()->create([
+                    'texto' => $pergunta->texto,
+                    'tempo_segundos' => $pergunta->tempo_segundos,
+                    'ordem' => $pergunta->ordem,
+                ]);
+                foreach ($pergunta->alternativas as $alt) {
+                    $novaPergunta->alternativas()->create([
+                        'texto' => $alt->texto,
+                        'cor' => $alt->cor,
+                        'simbolo' => $alt->simbolo,
+                        'correta' => $alt->correta,
+                        'ordem' => $alt->ordem,
+                    ]);
+                }
+            }
+
+            return $copia;
+        });
+
+        return redirect()
+            ->route('professor.salas.show', $nova)
+            ->with('success', 'Sala duplicada (novas perguntas, novo PIN).');
     }
 }

@@ -62,6 +62,10 @@ Route::middleware(['auth', 'role:admin,professor'])
         Route::post('salas/{sala}/arquivar', [SalaController::class, 'arquivar'])->name('salas.arquivar');
         Route::post('salas/{sala}/desarquivar', [SalaController::class, 'desarquivar'])->name('salas.desarquivar');
 
+        // Encerrar (bloquear entrada) e duplicar sala.
+        Route::post('salas/{sala}/encerrar', [SalaController::class, 'encerrar'])->name('salas.encerrar');
+        Route::post('salas/{sala}/duplicar', [SalaController::class, 'duplicar'])->name('salas.duplicar');
+
         // Perguntas aninhadas na sala (shallow: create/store com sala; edit/update/destroy direto).
         Route::resource('salas.perguntas', PerguntaController::class)
             ->shallow()
