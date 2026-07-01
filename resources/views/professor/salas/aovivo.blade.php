@@ -57,8 +57,9 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body fs-4 fw-semibold text-center" id="pergunta-texto"></div>
         </div>
-        <div class="text-center">
-            <button id="btn-finalizar-pergunta" class="btn btn-danger btn-lg">Finalizar pergunta</button>
+        <div class="text-center text-muted">
+            <span class="spinner-border spinner-border-sm me-1"></span>
+            O resultado aparece automaticamente quando o tempo acabar.
         </div>
     </div>
 
@@ -94,6 +95,7 @@
     let ehUltima = false;
     let timerId = null;
     let chart = null;
+    let finalizando = false;
 
     function mostrar(id) {
         ['tela-lobby','tela-pergunta','tela-resultados','tela-fim']
@@ -125,6 +127,7 @@
 
     // ----- Iniciar/próxima pergunta -----
     async function proxima() {
+        finalizando = false;
         const data = await post(document.getElementById('proxima-url').value);
         if (data.fim) { return finalizarJogo(); }
         ehUltima = !!data.eh_ultima;
@@ -147,11 +150,13 @@
         }, 250);
     }
 
-    // ----- Finalizar pergunta -> gráfico -----
+    // ----- Finalizar pergunta -> gráfico (só quando o tempo acaba) -----
     async function finalizarPergunta() {
+        if (finalizando) return;      // evita disparo duplo do timer / duplo clique
+        finalizando = true;
         clearInterval(timerId);
         const data = await post(document.getElementById('finalizar-pergunta-url').value);
-        if (data.erro) return;
+        if (data.erro) { finalizando = false; return; }
 
         const total = data.total_jogadores || 1;
         document.getElementById('total-respostas').textContent = data.total_respostas;
@@ -189,7 +194,6 @@
     // ----- Eventos -----
     document.getElementById('btn-proxima').addEventListener('click', proxima);
     document.getElementById('btn-proxima-2').addEventListener('click', proxima);
-    document.getElementById('btn-finalizar-pergunta').addEventListener('click', finalizarPergunta);
     document.getElementById('btn-finalizar-jogo').addEventListener('click', finalizarJogo);
 
     window.Echo.channel('sala.' + salaId)
