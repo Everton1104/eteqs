@@ -32,7 +32,16 @@
     </div>
 
     <div class="alert alert-light border d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
-        <div><strong>{{ $sala->perguntas->count() }}</strong> pergunta(s) nesta sala.</div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div><strong>{{ $sala->perguntas->count() }}</strong> pergunta(s) nesta sala.</div>
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="mostrar-respostas"
+                       onchange="document.querySelectorAll('.detalhe-pergunta').forEach(e => e.classList.toggle('d-none', !this.checked));">
+                <label class="form-check-label small" for="mostrar-respostas" title="Revela enunciados e respostas — use só quando os alunos não estiverem vendo a tela">
+                    👁 Mostrar perguntas e respostas
+                </label>
+            </div>
+        </div>
         <div class="d-flex gap-2">
             <a href="{{ route('professor.salas.perguntas.create', $sala) }}" class="btn btn-primary btn-sm">+ Adicionar pergunta</a>
             @if ($sala->perguntas->isEmpty())
@@ -53,23 +62,26 @@
             </div>
         </div>
     @else
-        <ol class="list-group list-group-numbered shadow-sm">
+        <ol class="list-group shadow-sm">
             @foreach ($sala->perguntas as $pergunta)
                 <li class="list-group-item">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
-                        <div class="fw-semibold">{{ $pergunta->texto }}</div>
+                        <div class="fw-semibold">Pergunta {{ $loop->iteration }}</div>
                         <span class="badge bg-light text-dark border">{{ $pergunta->tempo_segundos }}s</span>
                     </div>
-                    <div class="row g-2 mb-2">
-                        @foreach ($pergunta->alternativas as $alt)
-                            <div class="col-md-6">
-                                <div class="alt-mini alt-{{ $alt->cor }} {{ $alt->correta ? 'alt-correta' : '' }}">
-                                    <span class="alt-shape">{{ \App\Models\Sala::CORES[$alt->ordem]['forma'] ?? '■' }}</span>
-                                    <span>{{ $alt->texto }}</span>
-                                    @if ($alt->correta) <span class="badge bg-success ms-auto">correta</span> @endif
+                    <div class="detalhe-pergunta d-none">
+                        <div class="fw-semibold mb-2">{{ $pergunta->texto }}</div>
+                        <div class="row g-2 mb-2">
+                            @foreach ($pergunta->alternativas as $alt)
+                                <div class="col-md-6">
+                                    <div class="alt-mini alt-{{ $alt->cor }} {{ $alt->correta ? 'alt-correta' : '' }}">
+                                        <span class="alt-shape">{{ \App\Models\Sala::CORES[$alt->ordem]['forma'] ?? '■' }}</span>
+                                        <span>{{ $alt->texto }}</span>
+                                        @if ($alt->correta) <span class="badge bg-success ms-auto">correta</span> @endif
+                                    </div>
                                 </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
                     <div class="d-flex gap-2">
                         <a href="{{ route('professor.perguntas.edit', $pergunta) }}" class="btn btn-sm btn-outline-primary">Editar</a>
